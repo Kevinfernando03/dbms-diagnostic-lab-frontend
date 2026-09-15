@@ -1,127 +1,64 @@
 import { z } from 'zod'
-import { isoDate } from './common'
+import type { Doctor } from './doctor'
+import type { TestCategory } from './catalogue'
 
-export const prioritySchema = z.enum(['routine', 'urgent', 'stat'])
-export type Priority = z.infer<typeof prioritySchema>
+/** TestOrder + OrderIncludesTest. */
 
-export const PRIORITY_LABELS: Record<Priority, string> = {
-  routine: 'Routine',
-  urgent: 'Urgent',
-  stat: 'STAT',
-}
-
-export const orderStatusSchema = z.enum([
-  'placed',
-  'in_progress',
-  'partially_completed',
-  'completed',
-  'cancelled',
-])
+export const orderStatusSchema = z.enum(['Pending', 'Processing', 'Completed', 'Cancelled'])
 export type OrderStatus = z.infer<typeof orderStatusSchema>
 
-export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
-  placed: 'Placed',
-  in_progress: 'In progress',
-  partially_completed: 'Partially completed',
-  completed: 'Completed',
-  cancelled: 'Cancelled',
+export const ORDER_STATUSES: OrderStatus[] = ['Pending', 'Processing', 'Completed', 'Cancelled']
+
+export const ORDER_STATUS_DESCRIPTIONS: Record<OrderStatus, string> = {
+  Pending: 'Booked. Awaiting sample collection.',
+  Processing: 'Sample collected. Results being prepared.',
+  Completed: 'Results verified and the report is available.',
+  Cancelled: 'Withdrawn before completion.',
 }
 
-/** Per-test lifecycle inside an order. Distinct from the sample's lifecycle. */
-export const orderTestStatusSchema = z.enum([
-  'pending',
-  'in_progress',
-  'awaiting_verification',
-  'verified',
-  'cancelled',
-])
-export type OrderTestStatus = z.infer<typeof orderTestStatusSchema>
-
-export const ORDER_TEST_STATUS_LABELS: Record<OrderTestStatus, string> = {
-  pending: 'Pending',
-  in_progress: 'In progress',
-  awaiting_verification: 'Awaiting verification',
-  verified: 'Verified',
-  cancelled: 'Cancelled',
+/** OrderIncludesTest — one line of the order. */
+export interface OrderIncludesTest {
+  Order_ID: string
+  Test_ID: string
+  Test_Name: string
+  Test_Category: TestCategory
+  Price: number
 }
 
-export const referringDoctorSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  specialty: z.string(),
-  hospital: z.string().optional(),
-})
-export type ReferringDoctor = z.infer<typeof referringDoctorSchema>
+export interface TestOrder {
+  Order_ID: string
+  Order_Date: string
+  Patient_ID: string
+  Patient_Name: string
+  Doctor_ID: string | null
+  Doctor_Name: string | null
+  Specialization: string | null
+  Status: OrderStatus
+  Tests: OrderIncludesTest[]
+  Total_Price: number
+}
 
 /** Payload accepted by createOrder. */
 export const orderInputSchema = z.object({
-  patientId: z.string().min(1, 'Select a patient'),
-  testIds: z.array(z.string()).min(1, 'Add at least one test to the order'),
-  priority: prioritySchema.default('routine'),
-  referringDoctorId: z.string().optional(),
-  /** Percentage discount applied to the order subtotal. */
-  discountPercent: z.number().min(0).max(100).default(0),
-  notes: z.string().trim().max(300).optional(),
+  Patient_ID: z.string().min(1, 'Select a patient'),
+  Doctor_ID: z.string().min(1, 'Select a referring doctor'),
+  Test_IDs: z.array(z.string()).min(1, 'Select at least one test'),
+  Order_Date: z.string().min(1, 'Order date is required'),
 })
 export type OrderInput = z.infer<typeof orderInputSchema>
 
-export interface OrderTest {
-  id: string
-  testId: string
-  testCode: string
-  testName: string
-  category: string
-  price: number
-  status: OrderTestStatus
-  sampleId: string | null
-  resultEnteredAt: string | null
-  verifiedAt: string | null
-  verifiedBy: string | null
+/** Checkout summary computed live as tests are toggled in the catalogue grid. */
+export interface OrderSummaryLine {
+  Test_ID: string
+  Test_Name: string
+  Test_Category: TestCategory
+  Price: number
 }
 
-export interface Order {
-  id: string
-  /** Human-facing identifier, e.g. ORD-2026-04188. */
-  orderNumber: string
-  patientId: string
-  patientName: string
-  patientMrn: string
-  status: OrderStatus
-  priority: Priority
-  referringDoctor: ReferringDoctor | null
-  tests: OrderTest[]
-  subtotal: number
-  discountPercent: number
-  total: number
-  /** Longest turnaround among the ordered tests, in minutes. */
-  estimatedTurnaroundMinutes: number
-  expectedReadyAt: string
-  notes?: string
-  placedAt: string
-  placedBy: string
-  completedAt: string | null
-  cancelledAt: string | null
-  cancellationReason?: string
-}
+export const orderTotal = (lines: Array<{ Price: number }>) =>
+  lines.reduce((sum, line) => sum + line.Price, 0)
 
-/** Returned by estimateOrder — drives live pricing in the ordering flow. */
-export interface OrderEstimate {
-  lines: Array<{ testId: string; code: string; name: string; price: number }>
-  subtotal: number
-  discountPercent: number
-  discountAmount: number
-  total: number
-  estimatedTurnaroundMinutes: number
-  /** Distinct sample types the patient will need to give. */
-  sampleTypes: string[]
-  fastingRequired: boolean
-}
+export const doctorLabelFromOrder = (order: TestOrder) =>
+  order.Doctor_Name ? `${order.Doctor_Name} (${order.Specialization ?? '—'})` : 'Not referred'
 
-export const orderListFiltersSchema = z.object({
-  status: orderStatusSchema.optional(),
-  priority: prioritySchema.optional(),
-  patientId: z.string().optional(),
-  from: isoDate.optional(),
-  to: isoDate.optional(),
-})
-export type OrderListFilters = z.infer<typeof orderListFiltersSchema>
+export type { Doctor }

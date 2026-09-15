@@ -1,114 +1,77 @@
 import { z } from 'zod'
-import { sexSchema } from './patient'
 
-export const testCategorySchema = z.enum([
-  'hematology',
-  'biochemistry',
-  'thyroid',
-  'urinalysis',
-  'immunology',
-])
+/**
+ * Test, with its two specialisations.
+ *
+ * Test_Category is the discriminator: a Pathology test carries Specimen_Type
+ * (PathologyTest), a Radiology test carries Imaging_Modality (RadiologyTest).
+ * The admin catalogue form swaps its conditional input on this field.
+ */
+
+export const testCategorySchema = z.enum(['Pathology', 'Radiology'])
 export type TestCategory = z.infer<typeof testCategorySchema>
 
-export const TEST_CATEGORIES: TestCategory[] = [
-  'hematology',
-  'biochemistry',
-  'thyroid',
-  'urinalysis',
-  'immunology',
+export const TEST_CATEGORIES: TestCategory[] = ['Pathology', 'Radiology']
+
+export const specimenTypeSchema = z.enum(['Blood', 'Serum', 'Urine', 'Tissue', 'Stool', 'Swab'])
+export type SpecimenType = z.infer<typeof specimenTypeSchema>
+export const SPECIMEN_TYPES: SpecimenType[] = ['Blood', 'Serum', 'Urine', 'Tissue', 'Stool', 'Swab']
+
+export const imagingModalitySchema = z.enum(['X-Ray', 'MRI', 'CT Scan', 'Ultrasound', 'Mammography'])
+export type ImagingModality = z.infer<typeof imagingModalitySchema>
+export const IMAGING_MODALITIES: ImagingModality[] = [
+  'X-Ray',
+  'MRI',
+  'CT Scan',
+  'Ultrasound',
+  'Mammography',
 ]
 
-export const TEST_CATEGORY_LABELS: Record<TestCategory, string> = {
-  hematology: 'Hematology',
-  biochemistry: 'Biochemistry',
-  thyroid: 'Thyroid Profile',
-  urinalysis: 'Urinalysis',
-  immunology: 'Immunology',
-}
-
-export const sampleTypeSchema = z.enum([
-  'blood_edta',
-  'blood_serum',
-  'blood_fluoride',
-  'urine',
-  'stool',
-  'swab',
-])
-export type SampleType = z.infer<typeof sampleTypeSchema>
-
-export const SAMPLE_TYPE_LABELS: Record<SampleType, string> = {
-  blood_edta: 'Whole blood (EDTA)',
-  blood_serum: 'Serum',
-  blood_fluoride: 'Plasma (Fluoride)',
-  urine: 'Urine',
-  stool: 'Stool',
-  swab: 'Swab',
-}
-
-/** Short label for dense table cells. */
-export const SAMPLE_TYPE_SHORT: Record<SampleType, string> = {
-  blood_edta: 'EDTA',
-  blood_serum: 'Serum',
-  blood_fluoride: 'Fluoride',
-  urine: 'Urine',
-  stool: 'Stool',
-  swab: 'Swab',
+export interface Test {
+  Test_ID: string
+  Test_Name: string
+  Test_Category: TestCategory
+  Price: number
+  /** Present when Test_Category is 'Pathology' (PathologyTest). */
+  Specimen_Type: SpecimenType | null
+  /** Present when Test_Category is 'Radiology' (RadiologyTest). */
+  Imaging_Modality: ImagingModality | null
+  /** Canonical unit for the observed value, e.g. 'g/dL'. Null for imaging. */
+  Unit: string | null
 }
 
 /**
- * A reference range variant. Ranges legitimately differ by sex and age
- * (haemoglobin, creatinine, ALP and others), so the model carries variants from
- * the start rather than assuming one range per analyte.
- *
- * Resolution order: the most specific matching variant wins. A variant with no
- * sex and no age bounds is the fallback for everyone.
+ * Payload accepted by createTest. Validated as a discriminated union so that
+ * a Pathology test cannot be saved without a specimen, and a Radiology test
+ * cannot be saved without a modality.
  */
-export const referenceRangeSchema = z.object({
-  sex: sexSchema.optional(),
-  ageMinYears: z.number().min(0).optional(),
-  ageMaxYears: z.number().min(0).optional(),
-  low: z.number().nullable(),
-  high: z.number().nullable(),
-  /** Outside these bounds the result is flagged critical, not merely abnormal. */
-  criticalLow: z.number().nullable().optional(),
-  criticalHigh: z.number().nullable().optional(),
-  note: z.string().optional(),
-})
-export type ReferenceRange = z.infer<typeof referenceRangeSchema>
+export const testInputSchema = z
+  .object({
+    Test_Name: z.string().trim().min(2, 'Test name is required').max(60),
+    Test_Category: testCategorySchema,
+    Price: z.coerce.number().int('Price must be a whole number of rupees').min(0, 'Price cannot be negative'),
+    Specimen_Type: specimenTypeSchema.nullable().optional(),
+    Imaging_Modality: imagingModalitySchema.nullable().optional(),
+    Unit: z.string().trim().max(16).nullable().optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.Test_Category === 'Pathology' && !value.Specimen_Type) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['Specimen_Type'],
+        message: 'Select a specimen type for a pathology test',
+      })
+    }
+    if (value.Test_Category === 'Radiology' && !value.Imaging_Modality) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['Imaging_Modality'],
+        message: 'Select an imaging modality for a radiology test',
+      })
+    }
+  })
+export type TestInput = z.infer<typeof testInputSchema>
 
-export const analyteResultTypeSchema = z.enum(['numeric', 'qualitative', 'text'])
-export type AnalyteResultType = z.infer<typeof analyteResultTypeSchema>
-
-/** One measurable line inside a test. A CBC has many; a fasting glucose has one. */
-export const analyteSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  /** Canonical unit. No conversion is performed anywhere in the application. */
-  unit: z.string(),
-  resultType: analyteResultTypeSchema,
-  /** Allowed values when resultType is 'qualitative'. */
-  options: z.array(z.string()).optional(),
-  /** Which option counts as unremarkable, for flagging. */
-  normalOption: z.string().optional(),
-  decimals: z.number().int().min(0).max(3).default(1),
-  referenceRanges: z.array(referenceRangeSchema),
-})
-export type Analyte = z.infer<typeof analyteSchema>
-
-export const labTestSchema = z.object({
-  id: z.string(),
-  /** Short catalogue code shown in tables and on reports, e.g. CBC, TSH. */
-  code: z.string(),
-  name: z.string(),
-  category: testCategorySchema,
-  sampleType: sampleTypeSchema,
-  /** Turnaround time in minutes, from sample receipt to verified result. */
-  turnaroundMinutes: z.number().int().positive(),
-  price: z.number().nonnegative(),
-  fastingRequired: z.boolean(),
-  description: z.string(),
-  preparation: z.string().optional(),
-  analytes: z.array(analyteSchema),
-  active: z.boolean().default(true),
-})
-export type LabTest = z.infer<typeof labTestSchema>
+/** What the catalogue grid shows in the sub-label under the test name. */
+export const testDetailLabel = (test: Test) =>
+  test.Test_Category === 'Pathology' ? test.Specimen_Type : test.Imaging_Modality

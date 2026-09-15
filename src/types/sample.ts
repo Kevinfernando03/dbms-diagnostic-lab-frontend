@@ -1,99 +1,70 @@
 import { z } from 'zod'
-import { sampleTypeSchema } from './catalogue'
 
-export const sampleStatusSchema = z.enum([
-  'pending',
-  'collected',
-  'received',
-  'processing',
-  'completed',
-  'rejected',
+/** Sample — collected against an order and processed at a Laboratory. */
+
+export const sampleTypeSchema = z.enum([
+  'Whole Blood',
+  'Serum',
+  'Plasma',
+  'Urine',
+  'Stool',
+  'Tissue',
+  'Swab',
 ])
-export type SampleStatus = z.infer<typeof sampleStatusSchema>
+export type SampleType = z.infer<typeof sampleTypeSchema>
 
-/** The happy-path pipeline, in order. 'rejected' is a terminal side exit. */
-export const SAMPLE_PIPELINE: SampleStatus[] = [
-  'pending',
-  'collected',
-  'received',
-  'processing',
-  'completed',
+export const SAMPLE_TYPES: SampleType[] = [
+  'Whole Blood',
+  'Serum',
+  'Plasma',
+  'Urine',
+  'Stool',
+  'Tissue',
+  'Swab',
 ]
 
-export const SAMPLE_STATUS_LABELS: Record<SampleStatus, string> = {
-  pending: 'Pending',
-  collected: 'Collected',
-  received: 'Received',
-  processing: 'Processing',
-  completed: 'Completed',
-  rejected: 'Rejected',
-}
-
-export const SAMPLE_STATUS_DESCRIPTIONS: Record<SampleStatus, string> = {
-  pending: 'Awaiting collection from the patient.',
-  collected: 'Drawn from the patient, in transit to the lab.',
-  received: 'Logged in at the lab, queued for analysis.',
-  processing: 'On the analyser or bench.',
-  completed: 'Analysis finished, results entered.',
-  rejected: 'Unusable — recollection required.',
-}
-
-/**
- * Legal forward transitions. The UI only offers moves listed here, so an
- * invalid state change is unrepresentable rather than merely validated.
- */
-export const SAMPLE_TRANSITIONS: Record<SampleStatus, SampleStatus[]> = {
-  pending: ['collected', 'rejected'],
-  collected: ['received', 'rejected'],
-  received: ['processing', 'rejected'],
-  processing: ['completed', 'rejected'],
-  completed: [],
-  rejected: [],
-}
-
-export const SAMPLE_REJECTION_REASONS = [
-  'Haemolysed',
-  'Insufficient volume',
-  'Clotted specimen',
-  'Incorrect container',
-  'Unlabelled or mislabelled',
-  'Contaminated',
-  'Delayed transport',
-] as const
-
-export interface SampleEvent {
-  status: SampleStatus
-  at: string
-  by: string
-  note?: string
-}
+export const sampleStatusSchema = z.enum(['Collected', 'In Transit', 'Received', 'Rejected'])
+export type SampleStatus = z.infer<typeof sampleStatusSchema>
+export const SAMPLE_STATUSES: SampleStatus[] = ['Collected', 'In Transit', 'Received', 'Rejected']
 
 export interface Sample {
-  id: string
-  /** Barcode value printed on the tube, e.g. SMP-88214006. */
-  barcode: string
-  orderId: string
-  orderNumber: string
-  patientId: string
-  patientName: string
-  patientMrn: string
-  sampleType: z.infer<typeof sampleTypeSchema>
-  status: SampleStatus
-  priority: string
-  /** Test codes carried on this tube. */
-  testCodes: string[]
-  collectedAt: string | null
-  receivedAt: string | null
-  completedAt: string | null
-  rejectionReason: string | null
-  /** Full chain of custody, oldest first. */
-  events: SampleEvent[]
-  createdAt: string
+  /** Per-order sequence: S1, S2, S3 … */
+  Sample_No: string
+  Order_ID: string
+  Patient_ID: string
+  Patient_Name: string
+  Sample_Type: SampleType
+  Collection_DateTime: string
+  Lab_ID: string
+  Lab_Name: string
+  Tech_ID: string
+  Tech_Name: string
+  Status: SampleStatus
 }
 
-export const sampleStatusUpdateSchema = z.object({
-  status: sampleStatusSchema,
-  note: z.string().trim().max(200).optional(),
-  rejectionReason: z.string().optional(),
+/** Payload accepted by createSample. */
+export const sampleInputSchema = z.object({
+  Order_ID: z.string().min(1, 'Select an order'),
+  Sample_No: z
+    .string()
+    .trim()
+    .regex(/^S\d+$/, 'Sample number must look like S1, S2, S3'),
+  Sample_Type: sampleTypeSchema,
+  Collection_DateTime: z
+    .string()
+    .min(1, 'Collection date and time are required')
+    .refine((value) => new Date(value) <= new Date(), 'Collection time cannot be in the future'),
+  Lab_ID: z.string().min(1, 'Select the processing laboratory'),
+  Tech_ID: z.string().min(1, 'Select the collecting technician'),
+  Status: sampleStatusSchema.default('Collected'),
 })
-export type SampleStatusUpdate = z.infer<typeof sampleStatusUpdateSchema>
+export type SampleInput = z.infer<typeof sampleInputSchema>
+
+/** Next sequence number for an order that already has these samples. */
+export function nextSampleNo(existing: Array<Pick<Sample, 'Sample_No'>>): string {
+  const highest = existing.reduce((max, sample) => {
+    const parsed = Number.parseInt(sample.Sample_No.replace(/^S/i, ''), 10)
+    return Number.isFinite(parsed) && parsed > max ? parsed : max
+  }, 0)
+  return `S${highest + 1}`
+}

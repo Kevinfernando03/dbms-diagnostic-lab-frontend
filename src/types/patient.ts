@@ -1,79 +1,67 @@
 import { z } from 'zod'
-import { isoDate } from './common'
 
-export const sexSchema = z.enum(['male', 'female', 'other'])
-export type Sex = z.infer<typeof sexSchema>
+/**
+ * Patient + Patient_Contact.
+ *
+ * Field names mirror the database schema exactly (Patient_ID, First_Name …)
+ * so that a row coming off the API maps onto these types with no translation
+ * layer in between.
+ */
 
-export const SEX_LABELS: Record<Sex, string> = {
-  male: 'Male',
-  female: 'Female',
-  other: 'Other',
+export const genderSchema = z.enum(['M', 'F', 'O'])
+export type Gender = z.infer<typeof genderSchema>
+
+export const GENDERS: Gender[] = ['M', 'F', 'O']
+
+export const GENDER_LABELS: Record<Gender, string> = {
+  M: 'Male',
+  F: 'Female',
+  O: 'Other',
 }
 
-export const bloodGroupSchema = z.enum(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'])
-export type BloodGroup = z.infer<typeof bloodGroupSchema>
+/** Patient_Contact — a patient may have many contact numbers. */
+export interface PatientContact {
+  Patient_ID: string
+  Contact_No: string
+}
 
-/** Payload accepted by createPatient / updatePatient. */
+export const contactNoSchema = z
+  .string()
+  .trim()
+  .regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit mobile number')
+
+/** Payload accepted by createPatient(patientData, contacts[]). */
 export const patientInputSchema = z.object({
-  fullName: z
-    .string()
-    .trim()
-    .min(2, 'Enter the full name')
-    .max(80, 'Name must be 80 characters or fewer'),
-  dateOfBirth: z
+  First_Name: z.string().trim().min(1, 'First name is required').max(40),
+  Last_Name: z.string().trim().min(1, 'Last name is required').max(40),
+  DOB: z
     .string()
     .min(1, 'Date of birth is required')
     .refine((value) => new Date(value) <= new Date(), 'Date of birth cannot be in the future'),
-  sex: sexSchema,
-  phone: z
-    .string()
-    .trim()
-    .regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit mobile number'),
-  email: z.string().trim().email('Enter a valid email address').or(z.literal('')).optional(),
-  bloodGroup: bloodGroupSchema.optional(),
-  addressLine: z.string().trim().max(120).optional(),
-  city: z.string().trim().max(60).optional(),
-  pincode: z
-    .string()
-    .trim()
-    .regex(/^\d{6}$/, 'Enter a valid 6-digit PIN code')
-    .or(z.literal(''))
-    .optional(),
-  /** Free text — allergies, chronic conditions, current medication. */
-  clinicalNotes: z.string().trim().max(500).optional(),
+  Gender: genderSchema,
+  /** At least one number is required; the form adds and removes rows. */
+  Contacts: z.array(z.object({ Contact_No: contactNoSchema })).min(1, 'Add at least one contact number'),
 })
 export type PatientInput = z.infer<typeof patientInputSchema>
 
-export const patientSchema = patientInputSchema.extend({
-  id: z.string(),
-  /** Human-facing identifier printed on reports, e.g. PT-024188. */
-  mrn: z.string(),
-  registeredAt: isoDate,
-  updatedAt: isoDate,
-})
-export type Patient = z.infer<typeof patientSchema>
+export interface Patient {
+  Patient_ID: string
+  First_Name: string
+  Last_Name: string
+  DOB: string
+  Gender: Gender
+  Contacts: PatientContact[]
+}
 
-/** Row shape for the patient list — adds derived counters the list needs. */
+/** Row shape for the patient list — adds counters the table column needs. */
 export interface PatientListItem extends Patient {
-  orderCount: number
-  lastVisitAt: string | null
+  Order_Count: number
+  Last_Order_Date: string | null
 }
 
-export type PatientHistoryEventType =
-  | 'registered'
-  | 'order_placed'
-  | 'sample_collected'
-  | 'result_entered'
-  | 'report_ready'
-  | 'order_cancelled'
+export const patientFullName = (patient: Pick<Patient, 'First_Name' | 'Last_Name'>) =>
+  `${patient.First_Name} ${patient.Last_Name}`.trim()
 
-export interface PatientHistoryEvent {
-  id: string
-  type: PatientHistoryEventType
-  occurredAt: string
-  title: string
-  detail?: string
-  orderId?: string
-  reportId?: string
-  actor?: string
-}
+/** Primary number is the first one on file. */
+export const primaryContact = (patient: Pick<Patient, 'Contacts'>) =>
+  patient.Contacts[0]?.Contact_No ?? null

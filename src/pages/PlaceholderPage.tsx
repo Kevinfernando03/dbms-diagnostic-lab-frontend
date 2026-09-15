@@ -1,30 +1,32 @@
 import { Construction } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { EmptyState } from '@/components/data/EmptyState'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Surface } from '@/components/ui/Surface'
 
 /**
- * Temporary stand-in for screens scheduled in a later phase. Every one of these
- * is replaced by real work; none ships in the final build.
+ * Temporary stand-in for a screen that is not built yet.
+ *
+ * The data layer behind each of these already exists, so building them is a
+ * matter of wiring the existing services to UI - not new architecture.
  */
 export function PlaceholderPage({
   title,
   description,
-  phase,
+  pending,
+  action,
 }: {
   title: string
   description: string
-  phase: string
+  /** What is still to be built, in one sentence. */
+  pending: string
+  action?: ReactNode
 }) {
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader title={title} description={description} />
+      <PageHeader title={title} description={description} actions={action} />
       <Surface>
-        <EmptyState
-          icon={Construction}
-          title={`Scheduled for ${phase}`}
-          description="The design system, navigation shell and service layer this screen depends on are in place. The screen itself is built in a later phase."
-        />
+        <EmptyState icon={Construction} title="Not built yet" description={pending} />
       </Surface>
     </div>
   )

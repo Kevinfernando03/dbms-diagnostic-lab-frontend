@@ -1,104 +1,81 @@
 import { z } from 'zod'
 
-export const roleSchema = z.enum(['admin', 'receptionist', 'technician', 'doctor', 'patient'])
+/**
+ * Demo session and permissions.
+ *
+ * NOTE ON NAMING: authentication is not part of the database schema, so these
+ * types keep camelCase. Everything that maps to a real table (Patient, Test,
+ * Sample, Report …) uses the schema's exact column names instead.
+ *
+ * Roles mirror the five project modules: the patient books and views, the
+ * technician collects samples, the pathologist enters and verifies results,
+ * and the administrator manages the catalogue, staff and labs.
+ */
+
+export const roleSchema = z.enum(['admin', 'patient', 'technician', 'pathologist'])
 export type Role = z.infer<typeof roleSchema>
 
-export const ROLES: Role[] = ['admin', 'receptionist', 'technician', 'doctor', 'patient']
+export const ROLES: Role[] = ['admin', 'patient', 'technician', 'pathologist']
 
 export const ROLE_LABELS: Record<Role, string> = {
-  admin: 'Lab Administrator',
-  receptionist: 'Receptionist',
-  technician: 'Lab Technician',
-  doctor: 'Doctor',
+  admin: 'Administrator',
   patient: 'Patient',
+  technician: 'Lab Technician',
+  pathologist: 'Pathologist',
 }
 
 export const ROLE_DESCRIPTIONS: Record<Role, string> = {
-  admin: 'Full access to every module, analytics and operational overrides.',
-  receptionist: 'Register patients, create orders, track progress and look up records.',
-  technician: 'Collect samples, work the pending queue and enter result values.',
-  doctor: 'Look up patients, order tests and review verified reports.',
-  patient: 'View your own profile, test history, status tracker and reports.',
+  admin: 'Manage the test catalogue, staff directory and laboratory locations.',
+  patient: 'Register, book test orders, track status and read your reports.',
+  technician: 'Look up orders, record sample collection and assign them to a lab.',
+  pathologist: 'Work the pending queue, enter observed values and issue reports.',
 }
 
 /**
- * Permissions, not roles, gate the UI. Components ask `can('order:create')` so
- * that when the backend ships real RBAC the strings map across unchanged.
+ * Permissions, not roles, gate the UI. Components ask can('order:create') so
+ * that when the backend ships real access control the strings map across.
  */
 export const PERMISSIONS = [
   'patient:read',
   'patient:write',
-  'patient:read-own',
   'catalogue:read',
   'catalogue:write',
   'order:read',
   'order:create',
-  'order:cancel',
   'sample:read',
-  'sample:update-status',
-  'worklist:read',
-  'result:write',
-  'result:verify',
+  'sample:write',
   'report:read',
-  'report:read-own',
-  'analytics:read',
-  'settings:manage',
+  'report:write',
+  'staff:manage',
 ] as const
 
 export type Permission = (typeof PERMISSIONS)[number]
 
-/**
- * The two '-own' permissions mean "read the record that belongs to me" and only
- * make sense for a patient session. Admins hold the unscoped 'patient:read' and
- * 'report:read' instead, so they must not inherit these — otherwise the
- * navigation offers an administrator a personal profile they do not have.
- */
-const ADMIN_PERMISSIONS: readonly Permission[] = PERMISSIONS.filter(
-  (permission) => permission !== 'patient:read-own' && permission !== 'report:read-own',
-)
-
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
-  admin: ADMIN_PERMISSIONS,
-  receptionist: [
-    'patient:read',
-    'patient:write',
-    'catalogue:read',
-    'order:read',
-    'order:create',
-    'order:cancel',
-    'sample:read',
-    'sample:update-status',
-    'report:read',
-  ],
-  technician: [
+  admin: PERMISSIONS,
+  patient: ['catalogue:read', 'order:read', 'order:create', 'report:read', 'patient:read'],
+  technician: ['patient:read', 'catalogue:read', 'order:read', 'sample:read', 'sample:write'],
+  pathologist: [
     'patient:read',
     'catalogue:read',
     'order:read',
     'sample:read',
-    'sample:update-status',
-    'worklist:read',
-    'result:write',
-  ],
-  doctor: [
-    'patient:read',
-    'catalogue:read',
-    'order:read',
-    'order:create',
     'report:read',
-    'result:verify',
+    'report:write',
   ],
-  patient: ['patient:read-own', 'catalogue:read', 'report:read-own'],
 }
 
 export const sessionUserSchema = z.object({
   id: z.string(),
   name: z.string(),
   role: roleSchema,
-  /** Set only for the patient role — links the session to a patient record. */
+  /** Set for the patient role — scopes the app to one Patient_ID. */
   patientId: z.string().optional(),
-  /** Set for doctors and technicians — shown on reports and audit trails. */
+  /** Set for pathologists — printed in the report signature block. */
+  pathologistId: z.string().optional(),
+  /** Set for technicians — stamped on collected samples. */
+  techId: z.string().optional(),
   designation: z.string().optional(),
-  email: z.string().email().optional(),
 })
 export type SessionUser = z.infer<typeof sessionUserSchema>
 

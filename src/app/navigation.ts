@@ -1,13 +1,13 @@
 import {
-  BarChart3,
+  Building2,
   ClipboardList,
   FileText,
   FlaskConical,
   LayoutDashboard,
-  Settings,
+  Microscope,
   TestTubes,
-  UserRound,
   Users,
+  UsersRound,
 } from 'lucide-react'
 import type { ComponentType } from 'react'
 import type { Permission } from '@/types'
@@ -32,6 +32,8 @@ export interface NavSection {
  * Navigation is GENERATED from permissions, so a role can never see a link it
  * is not allowed to open. Route guards enforce the same rule on direct URL
  * entry; this list only decides what is offered.
+ *
+ * Sections map onto the five project modules.
  */
 export const NAV_SECTIONS: NavSection[] = [
   {
@@ -45,47 +47,46 @@ export const NAV_SECTIONS: NavSection[] = [
         permission: 'order:read',
         end: true,
       },
-      { to: '/me', label: 'My profile', icon: UserRound, permission: 'patient:read-own', end: true },
-      { to: '/me/reports', label: 'My reports', icon: FileText, permission: 'report:read-own' },
     ],
   },
   {
-    id: 'clinical',
-    label: 'Clinical',
+    id: 'patient',
+    label: 'Patient',
     items: [
       { to: '/patients', label: 'Patients', icon: Users, permission: 'patient:read' },
+      { to: '/orders', label: 'Test orders', icon: ClipboardList, permission: 'order:read' },
       { to: '/catalogue', label: 'Test catalogue', icon: TestTubes, permission: 'catalogue:read' },
-      { to: '/orders', label: 'Orders', icon: ClipboardList, permission: 'order:read' },
     ],
   },
   {
     id: 'laboratory',
     label: 'Laboratory',
     items: [
-      { to: '/samples', label: 'Samples', icon: FlaskConical, permission: 'sample:read' },
-      { to: '/worklist', label: 'Worklist', icon: ClipboardList, permission: 'worklist:read' },
+      { to: '/samples', label: 'Sample intake', icon: FlaskConical, permission: 'sample:read' },
+      { to: '/results', label: 'Result entry', icon: Microscope, permission: 'report:write' },
     ],
   },
   {
     id: 'output',
-    label: 'Output',
+    label: 'Reports',
     items: [
-      { to: '/reports', label: 'Reports', icon: FileText, permission: 'report:read' },
-      { to: '/analytics', label: 'Analytics', icon: BarChart3, permission: 'analytics:read' },
+      { to: '/reports', label: 'Diagnostic reports', icon: FileText, permission: 'report:read' },
     ],
   },
   {
-    id: 'system',
-    label: 'System',
-    items: [{ to: '/settings', label: 'Settings', icon: Settings, permission: 'settings:manage' }],
+    id: 'administration',
+    label: 'Administration',
+    items: [
+      { to: '/admin/staff', label: 'Staff directory', icon: UsersRound, permission: 'staff:manage' },
+      { to: '/admin/labs', label: 'Laboratories', icon: Building2, permission: 'staff:manage' },
+    ],
   },
 ]
 
 /** Where each role lands after signing in. */
 export const ROLE_HOME: Record<string, string> = {
   admin: '/dashboard',
-  receptionist: '/dashboard',
-  technician: '/worklist',
-  doctor: '/dashboard',
-  patient: '/me',
+  patient: '/orders',
+  technician: '/samples',
+  pathologist: '/results',
 }

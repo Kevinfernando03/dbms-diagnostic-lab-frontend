@@ -18,7 +18,7 @@ function load(): SeedData {
     const stored = sessionStorage.getItem(STORAGE_KEY)
     if (stored) return JSON.parse(stored) as SeedData
   } catch {
-    // Private browsing, disabled storage, or corrupt JSON — fall through to a
+    // Private browsing, disabled storage, or corrupt JSON: fall through to a
     // fresh seed rather than leaving the application without data.
   }
   return buildSeed()

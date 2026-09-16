@@ -1,13 +1,14 @@
 import { AlertTriangle, ArrowUp, Minus } from 'lucide-react'
 import type { ComponentType } from 'react'
 import { cn } from '@/lib/cn'
+import { PulseDot } from '@/components/domain/PulseDot'
 import { REMARK_DESCRIPTIONS, type Remark } from '@/types'
 
 /**
  * Renders a HasResult.Remark.
  *
  * Every state carries a glyph AND a word AND a colour. Colour alone never
- * conveys the finding — a red cell means nothing to a colour-blind reader or
+ * conveys the finding: a red cell means nothing to a colour-blind reader or
  * on a monochrome printout of the report.
  */
 
@@ -44,12 +45,13 @@ export function RemarkIndicator({ remark, className }: { remark: Remark; classNa
       title={REMARK_DESCRIPTIONS[remark]}
     >
       <Icon className={cn('size-3.5 shrink-0', visual.iconClassName)} aria-hidden="true" />
+      {remark === 'Critical' ? <PulseDot live /> : null}
       {remark}
     </span>
   )
 }
 
-/** Compact form for dense result tables — the word still ships to the reader. */
+/** Compact form for dense result tables: the word still ships to the reader. */
 export function RemarkCell({ remark }: { remark: Remark }) {
   return (
     <span className="inline-flex items-center gap-1">

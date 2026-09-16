@@ -7,7 +7,7 @@ import { resolveRoute } from '@/mock/handlers'
  *
  * Every service function in this folder calls request(). Nothing else in the
  * application performs network access. When the backend is ready, set
- * VITE_API_MODE=live in .env and this file starts issuing real fetch calls —
+ * VITE_API_MODE=live in .env and this file starts issuing real fetch calls:
  * no service, hook, page or component changes.
  *
  * Services are written once, against the REST paths in docs/api-contract.md,

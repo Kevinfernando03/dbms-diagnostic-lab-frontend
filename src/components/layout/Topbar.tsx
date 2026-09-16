@@ -102,7 +102,7 @@ export function Topbar({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" aria-label="Account menu">
-                <span className="flex size-6 items-center justify-center rounded-full bg-accent-subtle text-2xs font-semibold text-accent">
+                <span className="flex size-6 items-center justify-center rounded-[var(--radius-control)] bg-accent-subtle text-2xs font-semibold text-accent">
                   {initials(session.user.name)}
                 </span>
               </Button>
@@ -116,8 +116,8 @@ export function Topbar({
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               {session.user.role === 'patient' ? (
-                <DropdownMenuItem onSelect={() => navigate('/me')}>
-                  <UserRound /> My profile
+                <DropdownMenuItem onSelect={() => navigate('/patient')}>
+                  <UserRound /> My health record
                 </DropdownMenuItem>
               ) : null}
               <DropdownMenuItem destructive onSelect={handleLogout}>

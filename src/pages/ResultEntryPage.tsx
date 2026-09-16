@@ -25,7 +25,7 @@ interface RowState {
 }
 
 /**
- * Module 3 — result entry.
+ * Module 3: result entry.
  *
  * One row per test on the order (OrderIncludesTest), producing one HasResult
  * each. Remark is the pathologist's judgement, entered here rather than

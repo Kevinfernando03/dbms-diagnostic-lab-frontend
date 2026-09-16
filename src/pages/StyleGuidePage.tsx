@@ -43,7 +43,7 @@ export function StyleGuidePage() {
           <Button disabled>Disabled</Button>
           <Button
             variant="primary"
-            onClick={() => toast({ tone: 'success', title: 'Saved', description: 'Toast example.' })}
+            onClick={() => toast({ tone: 'success', title: 'Saved', description: 'Patient record updated.' })}
           >
             Show toast
           </Button>
@@ -53,13 +53,13 @@ export function StyleGuidePage() {
       <Surface>
         <SurfaceHeader title="Form controls" />
         <div className="grid gap-4 p-4 sm:grid-cols-2">
-          <Field label="Text input" hint="With a hint line.">
-            <Input placeholder="Placeholder" />
+          <Field label="First_Name" hint="As printed on government ID.">
+            <Input placeholder="e.g. Kavya" />
           </Field>
-          <Field label="With an error" error="Enter a valid 10-digit mobile number">
+          <Field label="Contact_No" error="Enter a valid 10-digit mobile number">
             <Input defaultValue="12345" />
           </Field>
-          <Field label="Select">
+          <Field label="Test_Category">
             <Select defaultValue="Pathology">
               <SelectTrigger>
                 <SelectValue />
@@ -70,8 +70,8 @@ export function StyleGuidePage() {
               </SelectContent>
             </Select>
           </Field>
-          <Field label="Textarea">
-            <Textarea placeholder="Notes" />
+          <Field label="Notes">
+            <Textarea placeholder="Clinical notes" />
           </Field>
           <div className="flex items-center gap-4">
             <label className="flex items-center gap-2 text-13">
@@ -116,7 +116,7 @@ export function StyleGuidePage() {
             <Badge tone="warning">Warning</Badge>
             <Badge tone="danger">Danger</Badge>
             <Badge tone="info">Info</Badge>
-            <Badge tone="purple">Purple</Badge>
+            <Badge tone="teal">Teal</Badge>
           </div>
         </div>
       </Surface>
@@ -158,7 +158,7 @@ export function StyleGuidePage() {
       <div className="grid gap-5 sm:grid-cols-2">
         <Surface>
           <SurfaceHeader title="Empty state" />
-          <EmptyState title="Nothing here yet" description="An empty result is a normal outcome." compact />
+          <EmptyState title="No orders match this view" description="Try a different status filter." compact />
         </Surface>
         <Surface>
           <SurfaceHeader title="Loading" />

@@ -1,20 +1,22 @@
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Printer } from 'lucide-react'
 import { useEffect } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, Navigate, useParams } from 'react-router-dom'
 import { QueryState } from '@/components/data/QueryState'
 import { ReportDocument } from '@/components/domain/ReportDocument'
 import { Button } from '@/components/ui/Button'
+import { usePatientScope } from '@/hooks/usePatientScope'
 import { getReport } from '@/services'
 
 /**
- * Module 4 — the print view.
+ * Module 4: the print view.
  *
  * Renders outside the app shell: no sidebar, no top bar. The browser's own
  * print-to-PDF does the export, so no PDF library ships in the bundle.
  */
 export function ReportPrintPage() {
   const { reportId = '' } = useParams()
+  const { canView } = usePatientScope()
 
   const query = useQuery({
     queryKey: ['report', reportId],
@@ -48,7 +50,11 @@ export function ReportPrintPage() {
       </div>
 
       <main className="px-4 py-8 print:p-0">
-        <QueryState query={query}>{(report) => <ReportDocument report={report} />}</QueryState>
+        <QueryState query={query}>
+          {(report) =>
+            canView(report.Patient_ID) ? <ReportDocument report={report} /> : <Navigate to="/403" replace />
+          }
+        </QueryState>
       </main>
     </div>
   )

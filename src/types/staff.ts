@@ -6,7 +6,7 @@ import { z } from 'zod'
  * ASSUMPTION worth confirming with the database team: Tech_ID and
  * Pathologist_ID are modelled as the subtype's own key, sharing the value of
  * the parent Staff_ID. If Ritvik's schema gives the subtypes independent
- * identifiers instead, only the mock seed changes — these types already carry
+ * identifiers instead, only the mock seed changes: these types already carry
  * both fields.
  */
 

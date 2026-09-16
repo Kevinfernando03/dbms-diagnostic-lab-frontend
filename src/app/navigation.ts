@@ -10,7 +10,7 @@ import {
   UsersRound,
 } from 'lucide-react'
 import type { ComponentType } from 'react'
-import type { Permission } from '@/types'
+import type { Permission, Role } from '@/types'
 
 export interface NavItem {
   to: string
@@ -18,6 +18,11 @@ export interface NavItem {
   icon: ComponentType<{ className?: string }>
   /** The item renders only if the session holds this permission. */
   permission: Permission
+  /**
+   * Further limits the item to specific roles. Used for workspaces, which
+   * belong to one role even where another role holds the same permission.
+   */
+  roles?: Role[]
   /** Match the path exactly rather than as a prefix. */
   end?: boolean
 }
@@ -40,13 +45,10 @@ export const NAV_SECTIONS: NavSection[] = [
     id: 'overview',
     label: 'Overview',
     items: [
-      {
-        to: '/dashboard',
-        label: 'Dashboard',
-        icon: LayoutDashboard,
-        permission: 'order:read',
-        end: true,
-      },
+      { to: '/admin', label: 'Workspace', icon: LayoutDashboard, permission: 'staff:manage', roles: ['admin'], end: true },
+      { to: '/patient', label: 'My health record', icon: LayoutDashboard, permission: 'order:read', roles: ['patient'], end: true },
+      { to: '/lab-tech', label: 'Workspace', icon: LayoutDashboard, permission: 'sample:write', roles: ['technician'], end: true },
+      { to: '/pathologist', label: 'Workspace', icon: LayoutDashboard, permission: 'report:write', roles: ['pathologist'], end: true },
     ],
   },
   {
@@ -83,10 +85,10 @@ export const NAV_SECTIONS: NavSection[] = [
   },
 ]
 
-/** Where each role lands after signing in. */
+/** Where each role lands after selecting it: its own workspace. */
 export const ROLE_HOME: Record<string, string> = {
-  admin: '/dashboard',
-  patient: '/orders',
-  technician: '/samples',
-  pathologist: '/results',
+  admin: '/admin',
+  patient: '/patient',
+  technician: '/lab-tech',
+  pathologist: '/pathologist',
 }

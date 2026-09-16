@@ -22,7 +22,7 @@ export const REMARK_DESCRIPTIONS: Record<Remark, string> = {
   Critical: 'Requires the referring doctor’s immediate attention.',
 }
 
-/** HasResult — one observed value for one test on one report. */
+/** HasResult: one observed value for one test on one report. */
 export interface HasResult {
   Report_ID: string
   Test_ID: string

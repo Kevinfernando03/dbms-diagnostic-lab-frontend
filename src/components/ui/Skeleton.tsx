@@ -2,7 +2,7 @@ import type { HTMLAttributes } from 'react'
 import { cn } from '@/lib/cn'
 
 /**
- * Loading placeholder. Marked aria-hidden — the live region announcing "Loading"
+ * Loading skeleton. Marked aria-hidden: the live region announcing "Loading"
  * lives on the container, so screen readers hear one message, not fifty bars.
  */
 export function Skeleton({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
@@ -15,7 +15,7 @@ export function Skeleton({ className, ...props }: HTMLAttributes<HTMLDivElement>
   )
 }
 
-/** Table body placeholder matching the real row height. */
+/** Table body skeleton matching the real row height. */
 export function SkeletonRows({ rows = 8, columns = 5 }: { rows?: number; columns?: number }) {
   return (
     <>

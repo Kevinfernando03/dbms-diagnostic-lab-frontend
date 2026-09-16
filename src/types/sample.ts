@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-/** Sample — collected against an order and processed at a Laboratory. */
+/** Sample: collected against an order and processed at a Laboratory. */
 
 export const sampleTypeSchema = z.enum([
   'Whole Blood',

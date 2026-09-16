@@ -14,7 +14,7 @@ import { formatAge, formatCurrency, formatDate } from '@/lib/format'
 import { getOrders, getPatientById } from '@/services'
 import { GENDER_LABELS, patientFullName } from '@/types'
 
-/** Module 1 — patient profile with the order history timeline. */
+/** Module 1: patient profile with the order history timeline. */
 export function PatientProfilePage() {
   const { patientId = '' } = useParams()
   const { can } = useAuth()

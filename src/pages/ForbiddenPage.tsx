@@ -14,7 +14,7 @@ export function ForbiddenPage() {
   return (
     <>
       {/* This page is the entire view, so the document needs a heading. The
-          EmptyState title is a paragraph by design — everywhere else it sits
+          EmptyState title is a paragraph by design: everywhere else it sits
           inside a page that already has its own h1. */}
       <h1 className="sr-only">Access denied</h1>
       <EmptyState
@@ -22,7 +22,7 @@ export function ForbiddenPage() {
         title="You do not have access to this screen"
         description={
           role
-            ? `The ${ROLE_LABELS[role]} role cannot open this page. Switch roles from the top bar if you need to see it.`
+            ? `The ${ROLE_LABELS[role]} workspace does not include this screen. Open the workspace that manages it from the switcher in the top bar.`
             : 'Sign in to continue.'
         }
         action={

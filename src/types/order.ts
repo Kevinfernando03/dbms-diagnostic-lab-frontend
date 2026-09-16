@@ -16,7 +16,7 @@ export const ORDER_STATUS_DESCRIPTIONS: Record<OrderStatus, string> = {
   Cancelled: 'Withdrawn before completion.',
 }
 
-/** OrderIncludesTest — one line of the order. */
+/** OrderIncludesTest: one line of the order. */
 export interface OrderIncludesTest {
   Order_ID: string
   Test_ID: string
@@ -59,6 +59,6 @@ export const orderTotal = (lines: Array<{ Price: number }>) =>
   lines.reduce((sum, line) => sum + line.Price, 0)
 
 export const doctorLabelFromOrder = (order: TestOrder) =>
-  order.Doctor_Name ? `${order.Doctor_Name} (${order.Specialization ?? '—'})` : 'Not referred'
+  order.Doctor_Name ? `${order.Doctor_Name} (${order.Specialization ?? '-'})` : 'Not referred'
 
 export type { Doctor }

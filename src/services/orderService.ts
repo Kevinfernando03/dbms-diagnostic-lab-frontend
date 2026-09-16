@@ -18,3 +18,10 @@ export const getOrderById = (orderId: string) => request<TestOrder>('GET', `/ord
 
 export const createOrder = (orderData: OrderInput) =>
   request<TestOrder>('POST', '/orders', orderData)
+
+export const cancelOrder = (orderId: string) =>
+  request<TestOrder>('PATCH', `/orders/${orderId}/cancel`)
+
+/** Refused with 409 once a report has been issued; cancel instead. */
+export const deleteOrder = (orderId: string) =>
+  request<{ ok: true }>('DELETE', `/orders/${orderId}`)

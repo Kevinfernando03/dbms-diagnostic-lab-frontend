@@ -6,6 +6,8 @@ export interface ReportListParams {
   pageSize?: number
   q?: string
   patientId?: string
+  /** Reports issued by one pathologist. */
+  pathologistId?: string
 }
 
 export const getReports = (params: ReportListParams = {}) =>

@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------------------------
- * Print layer — A4 clinical report output.
+ * Print layer: A4 clinical report output.
  *
  * The /reports/:id/print route renders bare (no app chrome), but these rules
  * also make any page print sanely. Report-specific structure lives in the

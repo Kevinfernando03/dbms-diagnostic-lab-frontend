@@ -18,11 +18,14 @@ export function Sidebar({
   collapsed?: boolean
   onNavigate?: () => void
 }) {
-  const { can } = useAuth()
+  const { can, session } = useAuth()
+  const role = session?.user.role
 
   const sections = NAV_SECTIONS.map((section) => ({
     ...section,
-    items: section.items.filter((item) => can(item.permission)),
+    items: section.items.filter(
+      (item) => can(item.permission) && (!item.roles || (role !== undefined && item.roles.includes(role))),
+    ),
   })).filter((section) => section.items.length > 0)
 
   return (
@@ -94,14 +97,6 @@ export function Sidebar({
           </div>
         ))}
       </nav>
-
-      {!collapsed ? (
-        <div className="shrink-0 border-t border-hairline px-4 py-2.5">
-          <p className="text-2xs text-fg-disabled">
-            Demo build · mock data
-          </p>
-        </div>
-      ) : null}
     </div>
   )
 }

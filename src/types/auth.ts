@@ -53,7 +53,9 @@ export type Permission = (typeof PERMISSIONS)[number]
 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   admin: PERMISSIONS,
-  patient: ['catalogue:read', 'order:read', 'order:create', 'report:read', 'patient:read'],
+  // No patient:read. A patient sees their own record through the patient
+  // workspace, never the register of other patients.
+  patient: ['catalogue:read', 'order:read', 'order:create', 'report:read'],
   technician: ['patient:read', 'catalogue:read', 'order:read', 'sample:read', 'sample:write'],
   pathologist: [
     'patient:read',
@@ -69,11 +71,11 @@ export const sessionUserSchema = z.object({
   id: z.string(),
   name: z.string(),
   role: roleSchema,
-  /** Set for the patient role — scopes the app to one Patient_ID. */
+  /** Set for the patient role: scopes the app to one Patient_ID. */
   patientId: z.string().optional(),
-  /** Set for pathologists — printed in the report signature block. */
+  /** Set for pathologists: printed in the report signature block. */
   pathologistId: z.string().optional(),
-  /** Set for technicians — stamped on collected samples. */
+  /** Set for technicians: stamped on collected samples. */
   techId: z.string().optional(),
   designation: z.string().optional(),
 })

@@ -2,7 +2,7 @@ import type { HTMLAttributes, ReactNode } from 'react'
 import { cn } from '@/lib/cn'
 
 /**
- * A bordered panel. Structure is carried by a 1px hairline, never a shadow —
+ * A bordered panel. Structure is carried by a 1px hairline, never a shadow:
  * floating cards are the visual tell this design deliberately avoids.
  */
 export function Surface({ className, ...props }: HTMLAttributes<HTMLDivElement>) {

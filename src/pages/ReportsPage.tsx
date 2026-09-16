@@ -18,7 +18,7 @@ import { countByRemark } from '@/types'
 
 const PAGE_SIZE = 12
 
-/** Module 4 — issued reports. */
+/** Module 4: issued reports. */
 export function ReportsPage() {
   const { session } = useAuth()
   const [search, setSearch] = useState('')

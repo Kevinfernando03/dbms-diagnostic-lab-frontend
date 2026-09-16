@@ -7,6 +7,8 @@ export interface SampleListParams {
   q?: string
   orderId?: string
   labId?: string
+  /** Samples collected by one technician. */
+  techId?: string
 }
 
 export const getSamples = (params: SampleListParams = {}) =>

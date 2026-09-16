@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { Printer } from 'lucide-react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, Navigate, useParams } from 'react-router-dom'
 import { QueryState } from '@/components/data/QueryState'
+import { usePatientScope } from '@/hooks/usePatientScope'
 import { ReportDocument } from '@/components/domain/ReportDocument'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/Badge'
@@ -10,9 +11,10 @@ import { Surface } from '@/components/ui/Surface'
 import { getReport } from '@/services'
 import { isReportIssued } from '@/types'
 
-/** Module 4 — the report viewer. */
+/** Module 4: the report viewer. */
 export function ReportViewPage() {
   const { reportId = '' } = useParams()
+  const { canView } = usePatientScope()
 
   const query = useQuery({
     queryKey: ['report', reportId],
@@ -23,7 +25,7 @@ export function ReportViewPage() {
   return (
     <div className="flex flex-col gap-5">
       <QueryState query={query}>
-        {(report) => (
+        {(report) => !canView(report.Patient_ID) ? <Navigate to="/403" replace /> : (
           <>
             <PageHeader
               title="Diagnostic report"

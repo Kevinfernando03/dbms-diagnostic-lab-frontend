@@ -11,7 +11,7 @@ export const inputBase =
   'aria-[invalid=true]:border-danger aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-[var(--danger)]/20'
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  /** Rendered inside the field on the leading edge — a search or currency glyph. */
+  /** Rendered inside the field on the leading edge: a search or currency glyph. */
   leading?: ReactNode
   trailing?: ReactNode
 }

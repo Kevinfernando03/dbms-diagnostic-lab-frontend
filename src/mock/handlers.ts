@@ -12,6 +12,7 @@ import {
   type Sample,
   type Test,
   type TestOrder,
+  type WorkspaceSummary,
   patientFullName,
 } from '@/types'
 import { db, nextId } from './db'
@@ -21,7 +22,7 @@ import { toIso, toIsoDate } from './rng'
  * Mock request handlers.
  *
  * Each entry answers one METHOD + path, exactly as the real API will. When the
- * backend is ready this whole file stops being imported — services and UI stay
+ * backend is ready this whole file stops being imported: services and UI stay
  * untouched. See services/http.ts for the switch.
  */
 
@@ -332,6 +333,9 @@ export const routes: Route[] = [
       const labId = query.get('labId')
       if (labId) rows = rows.filter((row) => row.Lab_ID === labId)
 
+      const techId = query.get('techId')
+      if (techId) rows = rows.filter((row) => row.Tech_ID === techId)
+
       const search = (query.get('q') ?? '').trim().toLowerCase()
       if (search) {
         rows = rows.filter(
@@ -533,6 +537,9 @@ export const routes: Route[] = [
       const patientId = query.get('patientId')
       if (patientId) rows = rows.filter((row) => row.Patient_ID === patientId)
 
+      const pathologistId = query.get('pathologistId')
+      if (pathologistId) rows = rows.filter((row) => row.Pathologist_ID === pathologistId)
+
       const search = (query.get('q') ?? '').trim().toLowerCase()
       if (search) {
         rows = rows.filter(
@@ -631,6 +638,338 @@ export const routes: Route[] = [
         return report
       })
     },
+  },
+
+  // ---------- Workspace summary ----------
+  {
+    method: 'GET',
+    pattern: '/analytics/summary',
+    handler: () => {
+      const { patients, orders, samples, reports, tests, staff, laboratories } = db.get()
+      const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+
+      const summary: WorkspaceSummary = {
+        Patient_Count: patients.length,
+        Orders_By_Status: { Pending: 0, Processing: 0, Completed: 0, Cancelled: 0 },
+        Orders_Last_7_Days: 0,
+        Revenue_Booked: 0,
+        Samples_By_Status: { Collected: 0, 'In Transit': 0, Received: 0, Rejected: 0 },
+        Samples_Last_7_Days: 0,
+        Pending_Results: 0,
+        Reports_Issued: 0,
+        Findings_By_Remark: { Normal: 0, Elevated: 0, Critical: 0 },
+        Test_Count: tests.length,
+        Staff_Count: staff.length,
+        Laboratory_Count: laboratories.length,
+      }
+
+      for (const order of orders) {
+        summary.Orders_By_Status[order.Status] += 1
+        if (order.Status !== 'Cancelled') summary.Revenue_Booked += order.Total_Price
+        if (new Date(order.Order_Date).getTime() >= weekAgo) summary.Orders_Last_7_Days += 1
+      }
+
+      for (const sample of samples) {
+        summary.Samples_By_Status[sample.Status] += 1
+        if (new Date(sample.Collection_DateTime).getTime() >= weekAgo) summary.Samples_Last_7_Days += 1
+      }
+
+      const ordersWithSamples = new Set(samples.map((sample) => sample.Order_ID))
+      for (const report of reports) {
+        if (report.Report_Date === null) {
+          if (ordersWithSamples.has(report.Order_ID)) summary.Pending_Results += 1
+          continue
+        }
+        summary.Reports_Issued += 1
+        for (const result of report.Results) summary.Findings_By_Remark[result.Remark] += 1
+      }
+
+      return summary
+    },
+  },
+
+  // ---------- Updates and deletes ----------
+  {
+    method: 'PATCH',
+    pattern: '/patients/:id',
+    handler: ({ params, body }) => {
+      const input = requireBody<{
+        First_Name: string
+        Last_Name: string
+        DOB: string
+        Gender: Patient['Gender']
+        Contacts: Array<{ Contact_No: string }>
+      }>(body)
+
+      return db.update((draft) => {
+        const patient = draft.patients.find((row) => row.Patient_ID === params.id)
+        if (!patient) throw new ApiError(404, 'NOT_FOUND', 'No patient with that ID')
+
+        patient.First_Name = input.First_Name
+        patient.Last_Name = input.Last_Name
+        patient.DOB = input.DOB
+        patient.Gender = input.Gender
+        patient.Contacts = input.Contacts.map((contact) => ({
+          Patient_ID: patient.Patient_ID,
+          Contact_No: contact.Contact_No,
+        }))
+
+        // Orders and reports carry the patient name inline for list views, so
+        // a rename has to reach them or the tables disagree with the record.
+        const fullName = patientFullName(patient)
+        for (const order of draft.orders) {
+          if (order.Patient_ID === patient.Patient_ID) order.Patient_Name = fullName
+        }
+        for (const sample of draft.samples) {
+          if (sample.Patient_ID === patient.Patient_ID) sample.Patient_Name = fullName
+        }
+        for (const report of draft.reports) {
+          if (report.Patient_ID !== patient.Patient_ID) continue
+          report.First_Name = patient.First_Name
+          report.Last_Name = patient.Last_Name
+          report.DOB = patient.DOB
+          report.Gender = patient.Gender
+        }
+
+        return patient
+      })
+    },
+  },
+  {
+    method: 'DELETE',
+    pattern: '/patients/:id',
+    handler: ({ params }) =>
+      db.update((draft) => {
+        const index = draft.patients.findIndex((row) => row.Patient_ID === params.id)
+        if (index === -1) throw new ApiError(404, 'NOT_FOUND', 'No patient with that ID')
+
+        const orderCount = draft.orders.filter((row) => row.Patient_ID === params.id).length
+        if (orderCount > 0) {
+          throw new ApiError(
+            409,
+            'CONFLICT',
+            `This patient has ${orderCount} order(s) on file and cannot be deleted. Cancel or remove the orders first.`,
+          )
+        }
+
+        draft.patients.splice(index, 1)
+        return { ok: true }
+      }),
+  },
+
+  {
+    method: 'PATCH',
+    pattern: '/tests/:id',
+    handler: ({ params, body }) => {
+      const input = requireBody<Omit<Test, 'Test_ID'>>(body)
+      return db.update((draft) => {
+        const test = draft.tests.find((row) => row.Test_ID === params.id)
+        if (!test) throw new ApiError(404, 'NOT_FOUND', 'No test with that ID')
+
+        test.Test_Name = input.Test_Name
+        test.Test_Category = input.Test_Category
+        test.Price = input.Price
+        test.Specimen_Type = input.Test_Category === 'Pathology' ? input.Specimen_Type : null
+        test.Imaging_Modality = input.Test_Category === 'Radiology' ? input.Imaging_Modality : null
+        test.Unit = input.Unit ?? null
+
+        // Existing order lines keep the price they were booked at; only the
+        // descriptive fields follow the catalogue.
+        for (const order of draft.orders) {
+          for (const line of order.Tests) {
+            if (line.Test_ID !== test.Test_ID) continue
+            line.Test_Name = test.Test_Name
+            line.Test_Category = test.Test_Category
+          }
+        }
+        return test
+      })
+    },
+  },
+  {
+    method: 'DELETE',
+    pattern: '/tests/:id',
+    handler: ({ params }) =>
+      db.update((draft) => {
+        const index = draft.tests.findIndex((row) => row.Test_ID === params.id)
+        if (index === -1) throw new ApiError(404, 'NOT_FOUND', 'No test with that ID')
+
+        const usage = draft.orders.filter((order) =>
+          order.Tests.some((line) => line.Test_ID === params.id),
+        ).length
+        if (usage > 0) {
+          throw new ApiError(
+            409,
+            'CONFLICT',
+            `This test appears on ${usage} order(s) and cannot be deleted. Historical orders must keep what was booked.`,
+          )
+        }
+
+        draft.tests.splice(index, 1)
+        return { ok: true }
+      }),
+  },
+
+  {
+    method: 'PATCH',
+    pattern: '/orders/:id/cancel',
+    handler: ({ params }) =>
+      db.update((draft) => {
+        const order = draft.orders.find((row) => row.Order_ID === params.id)
+        if (!order) throw new ApiError(404, 'NOT_FOUND', 'No order with that ID')
+        if (order.Status === 'Completed') {
+          throw new ApiError(409, 'CONFLICT', 'A completed order cannot be cancelled.')
+        }
+        order.Status = 'Cancelled'
+        return order
+      }),
+  },
+  {
+    method: 'DELETE',
+    pattern: '/orders/:id',
+    handler: ({ params }) =>
+      db.update((draft) => {
+        const index = draft.orders.findIndex((row) => row.Order_ID === params.id)
+        if (index === -1) throw new ApiError(404, 'NOT_FOUND', 'No order with that ID')
+
+        const issued = draft.reports.find(
+          (row) => row.Order_ID === params.id && row.Report_Date !== null,
+        )
+        if (issued) {
+          throw new ApiError(
+            409,
+            'CONFLICT',
+            `Report ${issued.Report_ID} has been issued against this order, so it cannot be deleted. Cancel it instead.`,
+          )
+        }
+
+        // Removing an order takes its samples and any draft report with it.
+        draft.samples = draft.samples.filter((row) => row.Order_ID !== params.id)
+        draft.reports = draft.reports.filter((row) => row.Order_ID !== params.id)
+        draft.orders.splice(index, 1)
+        return { ok: true }
+      }),
+  },
+
+  {
+    method: 'PATCH',
+    pattern: '/staff/:id',
+    handler: ({ params, body }) => {
+      const input = requireBody<{
+        Staff_Name: string
+        Shift: LabStaff['Shift']
+        Staff_Role: LabStaff['Staff_Role']
+        Certification?: string
+        License_No?: string
+        Qualification?: string
+      }>(body)
+
+      return db.update((draft) => {
+        const index = draft.staff.findIndex((row) => row.Staff_ID === params.id)
+        if (index === -1) throw new ApiError(404, 'NOT_FOUND', 'No staff member with that ID')
+        const existing = draft.staff[index] as LabStaff
+
+        const updated: LabStaff =
+          input.Staff_Role === 'Technician'
+            ? {
+                Staff_ID: existing.Staff_ID,
+                Staff_Name: input.Staff_Name,
+                Shift: input.Shift,
+                Staff_Role: 'Technician',
+                Tech_ID: existing.Staff_ID,
+                Certification: input.Certification ?? '',
+              }
+            : {
+                Staff_ID: existing.Staff_ID,
+                Staff_Name: input.Staff_Name,
+                Shift: input.Shift,
+                Staff_Role: 'Pathologist',
+                Pathologist_ID: existing.Staff_ID,
+                License_No: input.License_No ?? '',
+                Qualification: input.Qualification ?? '',
+              }
+
+        draft.staff[index] = updated
+
+        for (const sample of draft.samples) {
+          if (sample.Tech_ID === existing.Staff_ID) sample.Tech_Name = updated.Staff_Name
+        }
+        for (const report of draft.reports) {
+          if (report.Pathologist_ID !== existing.Staff_ID) continue
+          report.Pathologist_Name = updated.Staff_Name
+          if (updated.Staff_Role === 'Pathologist') {
+            report.License_No = updated.License_No
+            report.Qualification = updated.Qualification
+          }
+        }
+
+        return updated
+      })
+    },
+  },
+  {
+    method: 'DELETE',
+    pattern: '/staff/:id',
+    handler: ({ params }) =>
+      db.update((draft) => {
+        const index = draft.staff.findIndex((row) => row.Staff_ID === params.id)
+        if (index === -1) throw new ApiError(404, 'NOT_FOUND', 'No staff member with that ID')
+
+        const sampleCount = draft.samples.filter((row) => row.Tech_ID === params.id).length
+        const reportCount = draft.reports.filter((row) => row.Pathologist_ID === params.id).length
+        if (sampleCount + reportCount > 0) {
+          throw new ApiError(
+            409,
+            'CONFLICT',
+            `This staff member is recorded on ${sampleCount} sample(s) and ${reportCount} report(s) and cannot be deleted.`,
+          )
+        }
+
+        draft.staff.splice(index, 1)
+        return { ok: true }
+      }),
+  },
+
+  {
+    method: 'PATCH',
+    pattern: '/laboratories/:id',
+    handler: ({ params, body }) => {
+      const input = requireBody<Omit<Laboratory, 'Lab_ID'>>(body)
+      return db.update((draft) => {
+        const lab = draft.laboratories.find((row) => row.Lab_ID === params.id)
+        if (!lab) throw new ApiError(404, 'NOT_FOUND', 'No laboratory with that ID')
+
+        lab.Lab_Name = input.Lab_Name
+        lab.Location = input.Location
+        lab.Contact_No = input.Contact_No
+
+        for (const sample of draft.samples) {
+          if (sample.Lab_ID === lab.Lab_ID) sample.Lab_Name = lab.Lab_Name
+        }
+        return lab
+      })
+    },
+  },
+  {
+    method: 'DELETE',
+    pattern: '/laboratories/:id',
+    handler: ({ params }) =>
+      db.update((draft) => {
+        const index = draft.laboratories.findIndex((row) => row.Lab_ID === params.id)
+        if (index === -1) throw new ApiError(404, 'NOT_FOUND', 'No laboratory with that ID')
+
+        const sampleCount = draft.samples.filter((row) => row.Lab_ID === params.id).length
+        if (sampleCount > 0) {
+          throw new ApiError(
+            409,
+            'CONFLICT',
+            `${sampleCount} sample(s) are processed at this laboratory, so it cannot be deleted.`,
+          )
+        }
+
+        draft.laboratories.splice(index, 1)
+        return { ok: true }
+      }),
   },
 
   // ---------- Demo utility ----------

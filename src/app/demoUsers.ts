@@ -1,13 +1,13 @@
 import type { Role, SessionUser } from '@/types'
 
 /**
- * Fixed demo identities, one per module role.
+ * Fixed identities, one per module role.
  *
  * Presentation-layer scaffolding only. There are no credentials, no tokens and
- * no session security here by design — authentication is the backend team's
- * scope. The UI labels this as demo mode wherever it appears.
+ * no session security here by design: authentication is the backend team's
+ * scope.
  *
- * The IDs below deliberately match rows in the seeded mock data, so signing in
+ * The IDs below deliberately match rows in the seeded data layer, so signing in
  * as the patient scopes the app to a real Patient_ID with orders and reports.
  */
 export const DEMO_USERS: Record<Role, SessionUser> = {

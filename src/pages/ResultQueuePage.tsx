@@ -12,7 +12,7 @@ import { formatDate, formatDateTime } from '@/lib/format'
 import { getPendingResults } from '@/services'
 
 /**
- * Module 3 — the pathologist's pending queue.
+ * Module 3: the pathologist's pending queue.
  *
  * Every row is a draft Report whose samples have already been collected, so
  * the order is ready to be read. Oldest collection first.

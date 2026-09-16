@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-/** Laboratory — the physical facility a sample is processed at. */
+/** Laboratory: the physical facility a sample is processed at. */
 export interface Laboratory {
   Lab_ID: string
   Lab_Name: string

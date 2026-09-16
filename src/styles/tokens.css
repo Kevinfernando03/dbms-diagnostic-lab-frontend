@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------------------------
- * Design tokens — Diagnostic Lab LIMS
+ * Design tokens: Diagnostic Lab LIMS
  *
  * Two complete palettes, authored together. Every semantic token exists in both
  * themes; no component ever reaches for a raw hex value.
@@ -60,6 +60,11 @@
   --status-rejected: #b42318;
   --status-rejected-bg: #fef3f2;
 
+  /* --- Clinical teal: a second categorical tone beside blue --------- */
+  --teal: #0e7490;
+  --teal-bg: #ecfeff;
+  --teal-border: #a5e8f3;
+
   /* --- Feedback ---------------------------------------------------------- */
   --success: #067647;
   --success-bg: #ecfdf3;
@@ -91,6 +96,10 @@
 
 [data-theme='dark'] {
   color-scheme: dark;
+
+  --teal: #5fd4e6;
+  --teal-bg: #082a31;
+  --teal-border: #155e6c;
 
   --canvas: #0b0f16;
   --surface: #111823;

@@ -7,7 +7,7 @@ interface State {
 
 /**
  * Last line of defence. A render crash shows a recoverable message instead of a
- * blank white page, which is the difference between a bug and a dead demo.
+ * blank white page.
  */
 export class AppErrorBoundary extends Component<{ children: ReactNode }, State> {
   state: State = { error: null }

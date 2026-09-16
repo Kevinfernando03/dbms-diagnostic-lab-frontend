@@ -2,9 +2,9 @@ import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { Spinner } from '@/components/ui/Spinner'
 import { useAuth } from '@/hooks/useAuth'
-import type { Permission } from '@/types'
+import type { Permission, Role } from '@/types'
 
-/** Blocks a route until a demo session exists, remembering the intended URL. */
+/** Blocks a route until a session exists, remembering the intended URL. */
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { session, initialising } = useAuth()
   const location = useLocation()
@@ -37,4 +37,18 @@ export function RequirePermission({
 }) {
   const { can } = useAuth()
   return can(permission) ? <>{children}</> : <Navigate to="/403" replace />
+}
+
+/**
+ * For screens scoped to one identity rather than a capability. The patient
+ * workspace shows one person's record, so holding a permission is not enough:
+ * the session has to belong to a patient.
+ */
+export function RequireRole({ roles, children }: { roles: Role[]; children: ReactNode }) {
+  const { session } = useAuth()
+  return session && roles.includes(session.user.role) ? (
+    <>{children}</>
+  ) : (
+    <Navigate to="/403" replace />
+  )
 }

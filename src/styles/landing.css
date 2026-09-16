@@ -1,0 +1,198 @@
+/* ---------------------------------------------------------------------------
+ * Landing page effects: Chroma Grid, Aero Shards, glass surfaces.
+ *
+ * Scoped to the landing page. The interior application keeps the flat,
+ * hairline-bordered clinical treatment - none of this leaks into it.
+ *
+ * Every animation here is decorative, so all of it stops under
+ * prefers-reduced-motion (handled globally in base.css) and the layout stays
+ * identical when it does.
+ * ------------------------------------------------------------------------- */
+
+.landing-root {
+  /* The showcase is authored dark regardless of the app theme: glass and a
+     glowing grid only read correctly against a dark ground. */
+  color-scheme: dark;
+  --landing-ink: #f4f7fb;
+  --landing-ink-soft: #b9c4d4;
+  --landing-ink-muted: #bcc6d6;
+  --landing-ground: #120f17;
+  background-color: var(--landing-ground);
+  color: var(--landing-ink);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+/* --- Chroma Grid -------------------------------------------------------- */
+
+.chroma-grid {
+  position: absolute;
+  inset: -20%;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgb(120 170 255 / 0.10) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(120 170 255 / 0.10) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, #000 35%, transparent 78%);
+  animation: chroma-drift 38s linear infinite;
+}
+
+/* The hue wash that gives the grid its chroma. Separate layer so the grid
+   lines themselves stay a fixed opacity and never strobe. */
+.chroma-wash {
+  position: absolute;
+  inset: -30%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 50% at 22% 28%, rgb(43 124 233 / 0.30), transparent 70%),
+    radial-gradient(38% 46% at 78% 22%, rgb(120 78 233 / 0.26), transparent 70%),
+    radial-gradient(46% 52% at 62% 82%, rgb(20 160 170 / 0.22), transparent 72%);
+  filter: blur(36px);
+  animation: chroma-hue 26s ease-in-out infinite alternate;
+}
+
+@keyframes chroma-drift {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(64px, 64px, 0); }
+}
+
+@keyframes chroma-hue {
+  0%   { opacity: .75; transform: translate3d(0, 0, 0) scale(1); }
+  50%  { opacity: 1;   transform: translate3d(-2%, 1.5%, 0) scale(1.06); }
+  100% { opacity: .8;  transform: translate3d(1.5%, -1%, 0) scale(1.02); }
+}
+
+/* --- Aero Shards -------------------------------------------------------- */
+
+/*
+ * The canvas is created and sized by the AeroShards component. This layer
+ * never takes pointer events: the field tracks the pointer from window
+ * listeners instead, so a full-bleed canvas can sit under the role cards
+ * without ever swallowing a click on them.
+ */
+.aero-shards-container {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.aero-shards-container canvas {
+  display: block;
+}
+
+/* --- Glass surfaces ----------------------------------------------------- */
+
+.glass-surface {
+  position: relative;
+  background: rgb(15 23 42 / 0.58);
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  border: 1px solid rgb(255 255 255 / 0.10);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.10),
+    inset 0 -1px 0 rgb(255 255 255 / 0.04),
+    0 24px 60px -28px rgb(0 0 0 / 0.75);
+  transition:
+    transform 180ms var(--ease-out-quick),
+    border-color 180ms var(--ease-out-quick),
+    box-shadow 180ms var(--ease-out-quick);
+}
+
+/* The glowing rim, painted as a gradient border on a pseudo-element so the
+   card's own background stays a flat translucent slab. */
+.glass-surface::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(140deg, rgb(140 190 255 / 0.55), rgb(255 255 255 / 0.04) 42%, rgb(160 130 255 / 0.40));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 180ms var(--ease-out-quick);
+  pointer-events: none;
+}
+
+.glass-surface:hover,
+.glass-surface:focus-visible {
+  transform: translateY(-3px);
+  border-color: rgb(255 255 255 / 0.18);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.14),
+    0 30px 70px -26px rgb(0 0 0 / 0.85);
+}
+
+.glass-surface:hover::before,
+.glass-surface:focus-visible::before {
+  opacity: 1;
+}
+
+/* --- Spotlight (used on landing cards and interior tiles) --------------- */
+
+.spotlight {
+  position: relative;
+  overflow: hidden;
+}
+
+.spotlight::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms var(--ease-out-quick);
+  background: radial-gradient(
+    240px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+    var(--spot-color, rgb(255 255 255 / 0.10)),
+    transparent 65%
+  );
+}
+
+.spotlight:hover::after,
+.spotlight:focus-within::after {
+  opacity: 1;
+}
+
+/* --- Pulsing status dot ------------------------------------------------- */
+
+.pulse-dot {
+  position: relative;
+  display: inline-flex;
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: none;
+}
+
+.pulse-dot span:first-child {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: currentColor;
+  opacity: 0.65;
+  animation: pulse-ring 1.9s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.pulse-dot span:last-child {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  background: currentColor;
+}
+
+@keyframes pulse-ring {
+  0%   { transform: scale(1);   opacity: 0.6; }
+  70%  { transform: scale(2.4); opacity: 0; }
+  100% { transform: scale(2.4); opacity: 0; }
+}

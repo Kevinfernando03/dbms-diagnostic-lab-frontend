@@ -1,10 +1,12 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Search, UserPlus, Users } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ConfirmDialog } from '@/components/data/ConfirmDialog'
 import { EmptyState } from '@/components/data/EmptyState'
 import { Pagination } from '@/components/data/Pagination'
 import { QueryState } from '@/components/data/QueryState'
+import { RowActions } from '@/components/data/RowActions'
 import { Table, TableWrap, Td, Th, Tr } from '@/components/data/Table'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/Badge'
@@ -12,23 +14,51 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { Surface } from '@/components/ui/Surface'
+import { useToast } from '@/components/ui/Toast'
+import { PatientFormDialog } from '@/features/patients/PatientFormDialog'
 import { useAuth } from '@/hooks/useAuth'
 import { formatAge, formatDate } from '@/lib/format'
-import { getPatients } from '@/services'
-import { GENDER_LABELS, patientFullName, primaryContact } from '@/types'
+import { deletePatient, getPatients } from '@/services'
+import { GENDER_LABELS, type PatientListItem, patientFullName, primaryContact } from '@/types'
 
 const PAGE_SIZE = 12
 
-/** Module 1 — the patient register: search, sort, paginate. */
+/** Module 1 - the patient register, with full create, edit and delete. */
 export function PatientsPage() {
   const { can } = useAuth()
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
+  const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState<PatientListItem | null>(null)
+  const [deleting, setDeleting] = useState<PatientListItem | null>(null)
 
   const query = useQuery({
     queryKey: ['patients', { search, page }],
-    queryFn: () => getPatients({ q: search, page, pageSize: PAGE_SIZE, sort: 'Patient_ID', order: 'asc' }),
+    queryFn: () =>
+      getPatients({ q: search, page, pageSize: PAGE_SIZE, sort: 'Patient_ID', order: 'asc' }),
   })
+
+  const deleteMutation = useMutation({
+    mutationFn: (patientId: string) => deletePatient(patientId),
+    onSuccess: (_result, patientId) => {
+      void queryClient.invalidateQueries({ queryKey: ['patients'] })
+      toast({ tone: 'success', title: `Deleted patient ${patientId}` })
+      setDeleting(null)
+    },
+  })
+
+  const openCreate = () => {
+    setEditing(null)
+    setFormOpen(true)
+  }
+
+  const openEdit = (patient: PatientListItem) => {
+    setEditing(patient)
+    setFormOpen(true)
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -37,12 +67,15 @@ export function PatientsPage() {
         description="Every registered patient, with their contact numbers and order history."
         actions={
           can('patient:write') ? (
-            <Button variant="primary" asChild>
-              <Link to="/patients/new">
+            <>
+              <Button asChild>
+                <Link to="/patients/new">Full form</Link>
+              </Button>
+              <Button variant="primary" onClick={openCreate}>
                 <UserPlus />
-                Register patient
-              </Link>
-            </Button>
+                Add patient
+              </Button>
+            </>
           ) : null
         }
       />
@@ -77,6 +110,14 @@ export function PatientsPage() {
                   ? 'Try a different name, Patient_ID or contact number.'
                   : 'Register the first patient to get started.'
               }
+              action={
+                can('patient:write') && !search ? (
+                  <Button variant="primary" onClick={openCreate}>
+                    <UserPlus />
+                    Add patient
+                  </Button>
+                ) : null
+              }
               compact
             />
           }
@@ -84,7 +125,7 @@ export function PatientsPage() {
             <TableWrap>
               <Table>
                 <tbody>
-                  <SkeletonRows rows={8} columns={6} />
+                  <SkeletonRows rows={8} columns={7} />
                 </tbody>
               </Table>
             </TableWrap>
@@ -102,6 +143,7 @@ export function PatientsPage() {
                       <Th>DOB / Age</Th>
                       <Th>Contact_No</Th>
                       <Th numeric>Orders</Th>
+                      <Th className="text-right">Actions</Th>
                     </tr>
                   </thead>
                   <tbody>
@@ -122,7 +164,7 @@ export function PatientsPage() {
                           <span className="ml-2 text-fg-muted">{formatAge(patient.DOB)}</span>
                         </Td>
                         <Td className="font-mono text-xs">
-                          {primaryContact(patient) ?? '—'}
+                          {primaryContact(patient) ?? '-'}
                           {patient.Contacts.length > 1 ? (
                             <Badge className="ml-1.5" tone="neutral">
                               +{patient.Contacts.length - 1}
@@ -130,6 +172,17 @@ export function PatientsPage() {
                           ) : null}
                         </Td>
                         <Td numeric>{patient.Order_Count}</Td>
+                        <Td>
+                          {can('patient:write') ? (
+                            <RowActions
+                              label={`patient ${patient.Patient_ID}`}
+                              onEdit={() => openEdit(patient)}
+                              onDelete={() => setDeleting(patient)}
+                              disableDelete={patient.Order_Count > 0}
+                              disableDeleteReason={`${patient.Patient_ID} has ${patient.Order_Count} order(s) on file and cannot be deleted`}
+                            />
+                          ) : null}
+                        </Td>
                       </Tr>
                     ))}
                   </tbody>
@@ -146,6 +199,28 @@ export function PatientsPage() {
           )}
         </QueryState>
       </Surface>
+
+      <PatientFormDialog open={formOpen} onOpenChange={setFormOpen} patient={editing} />
+
+      <ConfirmDialog
+        open={Boolean(deleting)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleting(null)
+            deleteMutation.reset()
+          }
+        }}
+        title="Delete patient"
+        description={
+          deleting
+            ? `Are you sure you want to delete patient ${deleting.Patient_ID}, ${patientFullName(deleting)}? This cannot be undone.`
+            : ''
+        }
+        confirmLabel="Delete patient"
+        loading={deleteMutation.isPending}
+        error={deleteMutation.error}
+        onConfirm={() => deleting && deleteMutation.mutate(deleting.Patient_ID)}
+      />
     </div>
   )
 }

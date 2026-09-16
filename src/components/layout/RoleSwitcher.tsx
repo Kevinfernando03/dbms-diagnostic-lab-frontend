@@ -17,9 +17,8 @@ import { cn } from '@/lib/cn'
 import { ROLES, ROLE_DESCRIPTIONS, ROLE_LABELS, type Role } from '@/types'
 
 /**
- * Demo affordance: switch role without signing out, so the whole permission
- * model can be shown in one sitting. Labelled as demo mode so it is never
- * mistaken for a production capability.
+ * Workspace switcher: moves between the four role workspaces without signing
+ * out, landing on the chosen role's workspace home.
  */
 export function RoleSwitcher() {
   const { session, loginAs } = useAuth()
@@ -45,7 +44,7 @@ export function RoleSwitcher() {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-72">
-        <DropdownMenuLabel>Demo mode · switch role</DropdownMenuLabel>
+        <DropdownMenuLabel>Switch workspace</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {ROLES.map((role) => {
           const Icon = ROLE_ICONS[role]

@@ -9,6 +9,21 @@ import { Topbar } from './Topbar'
 const COLLAPSE_KEY = 'lims.sidebar.collapsed'
 
 /**
+ * Workspace grid background.
+ *
+ * One unbroken string on purpose: Tailwind generates arbitrary-value classes
+ * only when it finds the complete class token in source. Split across a string
+ * concatenation, the scanner sees two halves and emits nothing.
+ *
+ * Line strength is capped at 30% of the hairline token. Workspace headers sit
+ * on the grid rather than on a surface, and muted text on the plain light
+ * canvas is only 4.83:1 to begin with. At 70% a line crossing that text fell
+ * under AA.
+ */
+const WORKSPACE_GRID =
+  'bg-[image:linear-gradient(to_right,color-mix(in_oklab,var(--hairline)_30%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_oklab,var(--hairline)_30%,transparent)_1px,transparent_1px)] bg-[size:24px_24px] bg-[position:-1px_-1px]'
+
+/**
  * Application chrome.
  *
  * Desktop  ≥1024px  fixed 240px sidebar, collapsible to a 56px icon rail
@@ -67,10 +82,16 @@ export function AppShell() {
             collapsed={collapsed}
           />
 
+          {/*
+            Workspace ground: a faint 24px grid drawn with Tailwind gradient
+            utilities and the hairline token, so it follows light and dark
+            themes. Content sits on opaque surfaces, so the grid only shows in
+            the gutters and never behind table text. It does not print.
+          */}
           <main
             id="main-content"
             tabIndex={-1}
-            className="min-h-0 flex-1 overflow-y-auto px-4 py-5 focus:outline-none sm:px-6 sm:py-6"
+            className={cn('min-h-0 flex-1 overflow-y-auto px-4 py-5 focus:outline-none sm:px-6 sm:py-6', WORKSPACE_GRID)}
           >
             <Outlet />
           </main>

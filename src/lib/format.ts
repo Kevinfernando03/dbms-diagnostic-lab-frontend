@@ -2,7 +2,7 @@ import { format, formatDistanceToNowStrict, isValid, parseISO } from 'date-fns'
 
 const LOCALE = 'en-IN'
 
-/** Indian Rupee, no decimals — lab pricing is always whole rupees. */
+/** Indian Rupee, no decimals: lab pricing is always whole rupees. */
 export const currency = new Intl.NumberFormat(LOCALE, {
   style: 'currency',
   currency: 'INR',
@@ -28,25 +28,25 @@ function toDate(value: string | Date): Date | null {
 /** 14 Mar 2026 */
 export function formatDate(value: string | Date) {
   const date = toDate(value)
-  return date ? format(date, 'dd MMM yyyy') : '—'
+  return date ? format(date, 'dd MMM yyyy') : '-'
 }
 
 /** 14 Mar 2026, 09:42 */
 export function formatDateTime(value: string | Date) {
   const date = toDate(value)
-  return date ? format(date, 'dd MMM yyyy, HH:mm') : '—'
+  return date ? format(date, 'dd MMM yyyy, HH:mm') : '-'
 }
 
 /** 09:42 */
 export function formatTime(value: string | Date) {
   const date = toDate(value)
-  return date ? format(date, 'HH:mm') : '—'
+  return date ? format(date, 'HH:mm') : '-'
 }
 
-/** "3h ago" — always paired with an absolute date in a title attribute. */
+/** "3h ago": always paired with an absolute date in a title attribute. */
 export function formatRelative(value: string | Date) {
   const date = toDate(value)
-  return date ? `${formatDistanceToNowStrict(date)} ago` : '—'
+  return date ? `${formatDistanceToNowStrict(date)} ago` : '-'
 }
 
 /** Turnaround time in minutes to a human string: 45m, 6h, 2d 4h */
@@ -65,7 +65,7 @@ export function formatTurnaround(minutes: number) {
 /** 34 y · 8 m for infants, whole years otherwise. */
 export function formatAge(dateOfBirth: string | Date) {
   const dob = toDate(dateOfBirth)
-  if (!dob) return '—'
+  if (!dob) return '-'
   const now = new Date()
   let years = now.getFullYear() - dob.getFullYear()
   let months = now.getMonth() - dob.getMonth()
@@ -78,7 +78,7 @@ export function formatAge(dateOfBirth: string | Date) {
   return `${years} y`
 }
 
-/** KM, SR — used by the avatar fallback. */
+/** KM, SR: used by the avatar fallback. */
 export function initials(name: string) {
   return name
     .split(/\s+/)

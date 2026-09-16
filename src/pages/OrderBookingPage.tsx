@@ -12,13 +12,15 @@ import { Input } from '@/components/ui/Input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
 import { Surface, SurfaceHeader } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
+import { useAuth } from '@/hooks/useAuth'
+import SpotlightCard from '@/components/reactbits/SpotlightCard'
 import { cn } from '@/lib/cn'
 import { formatCurrency } from '@/lib/format'
 import { createOrder, getDoctors, getPatients, getTests } from '@/services'
 import { doctorOptionLabel, patientFullName, type Test } from '@/types'
 
 /**
- * Module 1 — interactive test ordering.
+ * Module 1: interactive test ordering.
  *
  * The catalogue grid toggles selection, and the checkout panel recalculates on
  * every change. Prices shown here are the catalogue's; the server recomputes
@@ -29,8 +31,15 @@ export function OrderBookingPage() {
   const queryClient = useQueryClient()
   const { toast } = useToast()
   const [searchParams] = useSearchParams()
+  const { session } = useAuth()
 
-  const [patientId, setPatientId] = useState(searchParams.get('patientId') ?? '')
+  // A patient books for themselves only. They never see a picker of other
+  // patients, and the query that would populate one is never issued.
+  const ownPatientId = session?.user.role === 'patient' ? (session.user.patientId ?? '') : null
+  const isPatientSession = ownPatientId !== null
+
+  const [chosenPatientId, setPatientId] = useState(searchParams.get('patientId') ?? '')
+  const patientId = isPatientSession ? ownPatientId : chosenPatientId
   const [doctorId, setDoctorId] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [search, setSearch] = useState('')
@@ -41,6 +50,7 @@ export function OrderBookingPage() {
   const patientsQuery = useQuery({
     queryKey: ['patients', 'picker'],
     queryFn: () => getPatients({ pageSize: 100, sort: 'First_Name', order: 'asc' }),
+    enabled: !isPatientSession,
   })
   const doctorsQuery = useQuery({ queryKey: ['doctors'], queryFn: getDoctors })
   const testsQuery = useQuery({ queryKey: ['tests', { search }], queryFn: () => getTests({ q: search }) })
@@ -139,16 +149,16 @@ export function OrderBookingPage() {
                   const isSelected = selected.has(test.Test_ID)
                   return (
                     <li key={test.Test_ID}>
+                      <SpotlightCard
+                        className={cn('h-full', isSelected && 'border-accent! bg-accent-subtle!')}
+                      >
                       <button
                         type="button"
                         onClick={() => toggle(test.Test_ID)}
                         aria-pressed={isSelected}
                         className={cn(
-                          'flex w-full items-start gap-2 rounded-[var(--radius-surface)] border p-3 text-left',
-                          'transition-colors duration-150',
-                          isSelected
-                            ? 'border-accent bg-accent-subtle'
-                            : 'border-hairline bg-surface hover:bg-surface-2',
+                          'flex h-full w-full items-start gap-2 p-3 text-left',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--focus-ring)]',
                         )}
                       >
                         <span
@@ -164,7 +174,7 @@ export function OrderBookingPage() {
                           <span className="block text-13 font-medium text-fg">{test.Test_Name}</span>
                           <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-2xs text-fg-muted">
                             <span className="font-mono">{test.Test_ID}</span>
-                            <Badge tone={test.Test_Category === 'Pathology' ? 'info' : 'purple'}>
+                            <Badge tone={test.Test_Category === 'Pathology' ? 'info' : 'teal'}>
                               {test.Test_Category}
                             </Badge>
                             <span>
@@ -176,6 +186,7 @@ export function OrderBookingPage() {
                         </span>
                         <span className="shrink-0 text-13 font-medium">{formatCurrency(test.Price)}</span>
                       </button>
+                      </SpotlightCard>
                     </li>
                   )
                 })}
@@ -189,20 +200,26 @@ export function OrderBookingPage() {
           <Surface>
             <SurfaceHeader title="Order details" />
             <div className="flex flex-col gap-4 p-4">
-              <Field label="Patient" required error={patientError}>
-                <Select value={patientId} onValueChange={setPatientId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a patient" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(patientsQuery.data?.data ?? []).map((patient) => (
-                      <SelectItem key={patient.Patient_ID} value={patient.Patient_ID}>
-                        {patient.Patient_ID} - {patientFullName(patient)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
+              {isPatientSession ? (
+                <Field label="Patient">
+                  <Input value={`${patientId} - ${session?.user.name ?? ''}`} readOnly />
+                </Field>
+              ) : (
+                <Field label="Patient" required error={patientError}>
+                  <Select value={patientId} onValueChange={setPatientId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a patient" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(patientsQuery.data?.data ?? []).map((patient) => (
+                        <SelectItem key={patient.Patient_ID} value={patient.Patient_ID}>
+                          {patient.Patient_ID} - {patientFullName(patient)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              )}
 
               <Field label="Referring doctor" required error={doctorError}>
                 <Select value={doctorId} onValueChange={setDoctorId}>

@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { FileText, FlaskConical } from 'lucide-react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, Navigate, useParams } from 'react-router-dom'
 import { EmptyState } from '@/components/data/EmptyState'
+import { usePatientScope } from '@/hooks/usePatientScope'
 import { QueryState } from '@/components/data/QueryState'
 import { Table, TableWrap, Td, Th, Tr } from '@/components/data/Table'
 import { OrderStatusBadge, SampleStatusBadge } from '@/components/domain/StatusBadge'
@@ -12,9 +13,10 @@ import { Surface, SurfaceHeader } from '@/components/ui/Surface'
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format'
 import { getOrderById, getReports, getSamples } from '@/services'
 
-/** Module 1 — a single TestOrder with its lines, samples and report link. */
+/** Module 1: a single TestOrder with its lines, samples and report link. */
 export function OrderDetailPage() {
   const { orderId = '' } = useParams()
+  const { canView } = usePatientScope()
 
   const orderQuery = useQuery({
     queryKey: ['order', orderId],
@@ -39,7 +41,7 @@ export function OrderDetailPage() {
   return (
     <div className="flex flex-col gap-5">
       <QueryState query={orderQuery}>
-        {(order) => (
+        {(order) => !canView(order.Patient_ID) ? <Navigate to="/403" replace /> : (
           <>
             <PageHeader
               title={`Order ${order.Order_ID}`}
@@ -88,7 +90,7 @@ export function OrderDetailPage() {
                         <Td className="font-mono text-xs">{line.Test_ID}</Td>
                         <Td className="font-medium text-fg">{line.Test_Name}</Td>
                         <Td>
-                          <Badge tone={line.Test_Category === 'Pathology' ? 'info' : 'purple'}>
+                          <Badge tone={line.Test_Category === 'Pathology' ? 'info' : 'teal'}>
                             {line.Test_Category}
                           </Badge>
                         </Td>

@@ -14,7 +14,7 @@ export function useMediaQuery(query: string) {
   return matches
 }
 
-/** Tailwind's lg breakpoint — the point where the fixed sidebar appears. */
+/** Tailwind's lg breakpoint: the point where the fixed sidebar appears. */
 export const useIsDesktop = () => useMediaQuery('(min-width: 1024px)')
 /** Below this the shell switches to the mobile sheet navigation. */
 export const useIsMobile = () => useMediaQuery('(max-width: 767px)')

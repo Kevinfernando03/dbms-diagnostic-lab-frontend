@@ -12,7 +12,7 @@ const STORAGE_KEY = 'lims.demo.session'
 
 export interface AuthContextValue {
   session: Session | null
-  /** True until the stored session has been read — prevents a login flash. */
+  /** True until the stored session has been read: prevents a login flash. */
   initialising: boolean
   loginAs: (role: Role) => void
   logout: () => void

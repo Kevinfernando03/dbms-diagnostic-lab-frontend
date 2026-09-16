@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { FlaskConical, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { EmptyState } from '@/components/data/EmptyState'
+import { useAuth } from '@/hooks/useAuth'
 import { Pagination } from '@/components/data/Pagination'
 import { QueryState } from '@/components/data/QueryState'
 import { Table, TableWrap, Td, Th, Tr } from '@/components/data/Table'
@@ -43,18 +45,24 @@ const nowLocal = () => {
   return new Date(now.getTime() - offset).toISOString().slice(0, 16)
 }
 
-/** Module 2 — sample collection and intake. */
+/** Module 2: sample collection and intake. */
 export function SampleIntakePage() {
   const queryClient = useQueryClient()
   const { toast } = useToast()
+  const { session } = useAuth()
+  const [searchParams] = useSearchParams()
 
-  const [lookup, setLookup] = useState('')
-  const [orderId, setOrderId] = useState('')
+  // Arriving from the technician workspace queue pre-selects the order, and a
+  // technician session pre-selects itself as the collecting technician.
+  const presetOrderId = (searchParams.get('orderId') ?? '').toUpperCase()
+
+  const [lookup, setLookup] = useState(presetOrderId)
+  const [orderId, setOrderId] = useState(presetOrderId)
   const [sampleNo, setSampleNo] = useState('S1')
   const [sampleType, setSampleType] = useState<SampleType>('Whole Blood')
   const [collectedAt, setCollectedAt] = useState(nowLocal)
   const [labId, setLabId] = useState('')
-  const [techId, setTechId] = useState('')
+  const [techId, setTechId] = useState(session?.user.techId ?? '')
   const [status, setStatus] = useState<SampleStatus>('Collected')
   const [submitted, setSubmitted] = useState(false)
   const [page, setPage] = useState(1)

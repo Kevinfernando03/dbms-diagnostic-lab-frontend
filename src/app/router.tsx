@@ -1,10 +1,13 @@
 import { Navigate, createBrowserRouter } from 'react-router-dom'
 import { AppShell } from '@/components/layout/AppShell'
 import { ForbiddenPage } from '@/pages/ForbiddenPage'
-import { LoginPage } from '@/pages/LoginPage'
+import { LandingPage } from '@/pages/LandingPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { StyleGuidePage } from '@/pages/StyleGuidePage'
-import { DashboardPage } from '@/pages/DashboardPage'
+import { AdminWorkspacePage } from '@/pages/workspace/AdminWorkspacePage'
+import { PathologistWorkspacePage } from '@/pages/workspace/PathologistWorkspacePage'
+import { PatientWorkspacePage } from '@/pages/workspace/PatientWorkspacePage'
+import { TechnicianWorkspacePage } from '@/pages/workspace/TechnicianWorkspacePage'
 import { PatientsPage } from '@/pages/PatientsPage'
 import { PatientRegisterPage } from '@/pages/PatientRegisterPage'
 import { PatientProfilePage } from '@/pages/PatientProfilePage'
@@ -20,7 +23,7 @@ import { ReportViewPage } from '@/pages/ReportViewPage'
 import { ReportPrintPage } from '@/pages/ReportPrintPage'
 import { StaffDirectoryPage } from '@/pages/StaffDirectoryPage'
 import { LaboratoriesPage } from '@/pages/LaboratoriesPage'
-import { RequireAuth, RequirePermission } from './guards'
+import { RequireAuth, RequirePermission, RequireRole } from './guards'
 import { RoleLanding } from './RoleLanding'
 import type { Permission } from '@/types'
 
@@ -38,7 +41,7 @@ function guarded(permission: Permission, element: React.ReactNode) {
  *   5. Administration    - test catalogue, staff and laboratories
  */
 export const router = createBrowserRouter([
-  { path: '/login', element: <LoginPage /> },
+  { path: '/login', element: <LandingPage /> },
   {
     path: '/',
     element: (
@@ -49,7 +52,21 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <RoleLanding /> },
 
-      { path: 'dashboard', element: guarded('order:read', <DashboardPage />) },
+      // --- Role workspaces: where each role lands after selection ----------
+      { path: 'admin', element: guarded('staff:manage', <AdminWorkspacePage />) },
+      {
+        path: 'patient',
+        element: (
+          <RequireRole roles={['patient']}>
+            <PatientWorkspacePage />
+          </RequireRole>
+        ),
+      },
+      { path: 'lab-tech', element: guarded('sample:write', <TechnicianWorkspacePage />) },
+      { path: 'pathologist', element: guarded('report:write', <PathologistWorkspacePage />) },
+
+      // Earlier links pointed here; send them to the right workspace.
+      { path: 'dashboard', element: <RoleLanding /> },
 
       // --- Module 1: Patient ---------------------------------------------
       { path: 'patients', element: guarded('patient:read', <PatientsPage />) },
@@ -77,7 +94,8 @@ export const router = createBrowserRouter([
       { path: 'admin/staff', element: guarded('staff:manage', <StaffDirectoryPage />) },
       { path: 'admin/labs', element: guarded('staff:manage', <LaboratoriesPage />) },
 
-      { path: 'design-system', element: <StyleGuidePage /> },
+      // Component reference for developers. Not shipped in production builds.
+      ...(import.meta.env.DEV ? [{ path: 'design-system', element: <StyleGuidePage /> }] : []),
       { path: '403', element: <ForbiddenPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],

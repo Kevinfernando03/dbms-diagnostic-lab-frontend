@@ -19,7 +19,7 @@ export const GENDER_LABELS: Record<Gender, string> = {
   O: 'Other',
 }
 
-/** Patient_Contact — a patient may have many contact numbers. */
+/** Patient_Contact: a patient may have many contact numbers. */
 export interface PatientContact {
   Patient_ID: string
   Contact_No: string
@@ -53,7 +53,7 @@ export interface Patient {
   Contacts: PatientContact[]
 }
 
-/** Row shape for the patient list — adds counters the table column needs. */
+/** Row shape for the patient list: adds counters the table column needs. */
 export interface PatientListItem extends Patient {
   Order_Count: number
   Last_Order_Date: string | null

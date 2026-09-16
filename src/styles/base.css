@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------------------------
- * Base layer — element defaults, focus policy, motion policy.
+ * Base layer: element defaults, focus policy, motion policy.
  * ------------------------------------------------------------------------- */
 
 *,
@@ -18,7 +18,7 @@ body {
   background-color: var(--canvas);
   color: var(--fg);
   font-family: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  font-size: 0.875rem;   /* 14px — dense UI baseline */
+  font-size: 0.875rem;   /* 14px: dense UI baseline */
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -81,7 +81,7 @@ table { border-collapse: collapse; border-spacing: 0; }
   }
 }
 
-/* Skip link — first focusable element in the document. */
+/* Skip link: first focusable element in the document. */
 .skip-link {
   position: absolute;
   left: -9999px;
